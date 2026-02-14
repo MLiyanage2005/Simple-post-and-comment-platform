@@ -16,7 +16,7 @@ user_table = sqlalchemy.Table(
     sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True),
      sqlalchemy.Column("email", sqlalchemy.String, nullable=False),
      sqlalchemy.Column("password", sqlalchemy.String, nullable=False),
-
+)
 
 comment_table = sqlalchemy.Table(
     "comment",
@@ -29,7 +29,7 @@ comment_table = sqlalchemy.Table(
         sqlalchemy.ForeignKey("post.id"),
         nullable=False,
     ),
-))
+)
 
 engine = sqlalchemy.create_engine(config.DATABASE_URL)
 
