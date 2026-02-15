@@ -1,3 +1,10 @@
+fastapi
+uvicorn
+sqlalchemy
+databases
+pymysql
+pydantic
+pydantic-settings
 ruff
 pytest
 httpx

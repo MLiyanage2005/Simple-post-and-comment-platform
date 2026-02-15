@@ -1,7 +1,9 @@
 import sqlalchemy
 import databases
 
-from config import config
+from app.config import get_config
+
+config = get_config()
 
 metadata = sqlalchemy.MetaData()
 

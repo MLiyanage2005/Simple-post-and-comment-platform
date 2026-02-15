@@ -1,47 +1,49 @@
-from email.policy import HTTP
-from http.client import HTTPException
+from fastapi import APIRouter, HTTPException
 
-from fastapi import APIRouter
-from fastapi.openapi.utils import status_code_ranges
-from pydantic import BaseModel
-from app.models.ppost import first_class,second_class,comment_in,comment_out
+from app.models.ppost import first_class, second_class, comment_in, comment_out
+from app.database import database, post_table, comment_table
 
-router=APIRouter()
+router = APIRouter()
 
-post_table={}
-comment_table={}
-
-@router.post("/comment",response_model=comment_out)
-async def create_comment(comment:comment_in):
-    post=find_post(comment.post_id)
+@router.post("/comment", response_model=comment_out)
+async def create_comment(comment: comment_in):
+    # Check if post exists
+    query = post_table.select().where(post_table.c.id == comment.post_id)
+    post = await database.fetch_one(query)
     if not post:
-        raise HTTPException()
-    data=comment.dict()
-    last_rec_id=len(comment_table)
-    new_comment={**data,"id":last_rec_id}
-    comment_table[last_rec_id]=new_comment
-    return new_comment
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    # Insert comment into database
+    query = comment_table.insert().values(body=comment.body, post_id=comment.post_id)
+    comment_id = await database.execute(query)
+    
+    return {**comment.dict(), "id": comment_id}
 
-def find_post(post_id:int):
-    return post_table.get(post_id)
+@router.post("/", response_model=second_class)
+async def create_post(post: first_class):
+    # Insert post into database
+    query = post_table.insert().values(body=post.body)
+    post_id = await database.execute(query)
+    
+    return {**post.dict(), "id": post_id}
 
-@router.post("/",response_model=second_class)
-async def create_post(post:first_class):
-    data=post.dict()
-    last_rec_id=len(post_table)
-    new_post={**data,"id":last_rec_id}
-    post_table[last_rec_id]=new_post
-    return new_post
-
-@router.get("/post",response_model=list[second_class])
-async def read_psts():
-    return list(post_table.values())
+@router.get("/post", response_model=list[second_class])
+async def read_posts():
+    # Fetch all posts from database
+    query = post_table.select()
+    posts = await database.fetch_all(query)
+    return posts
 
 @router.get("/comment/{post_id}/post", response_model=list[comment_out])
 async def getCommentsByPostId(post_id: int):
-    return [ com
-    for com in comment_table
-        if com["post_id"]==post_id
-            ]
-print(post_table)
+    # Check if post exists
+    query = post_table.select().where(post_table.c.id == post_id)
+    post = await database.fetch_one(query)
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    # Fetch comments for this post
+    query = comment_table.select().where(comment_table.c.post_id == post_id)
+    comments = await database.fetch_all(query)
+    return comments
 
